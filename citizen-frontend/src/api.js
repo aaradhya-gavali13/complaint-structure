@@ -2,7 +2,7 @@
  * API client for Citizen Grievance Portal.
  * Automatically communicates with FastAPI backend.
  */
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://complaint-structure.onrender.com";
 
 const CITIZEN_TOKEN_KEY = "citizen_token";
 const CITIZEN_USER_KEY = "citizen_user";

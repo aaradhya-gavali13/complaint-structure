@@ -2,7 +2,7 @@
  * Admin Dashboard API Client.
  * Manages JWT tokens and administrative REST requests to FastAPI.
  */
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL || "https://complaint-structure.onrender.com";
 
 const TOKEN_KEY = "grievance_admin_jwt";
 
