@@ -1,0 +1,45 @@
+# Large data files and models (Exceed GitHub 100MB file limit)
+complaints.csv
+complaints_clean_100k.csv
+complaint_issue_model.pkl
+*.csv
+*.pkl
+*.tar.gz
+*.zip
+
+# Database & Uploads
+grievances.db
+*.sqlite
+*.sqlite3
+uploads/*
+!uploads/.gitkeep
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+build/
+dist/
+*.egg-info/
+
+# Node.js dependencies & builds
+node_modules/
+dist/
+.npm
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# OS & IDE metadata
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

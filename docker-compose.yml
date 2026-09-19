@@ -1,0 +1,78 @@
+version: "3.8"
+
+services:
+  # ----------------------------------------------------------------------------
+  # FastAPI Backend API Service
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: grievance_backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8000
+      - ENVIRONMENT=production
+      - DATABASE_URL=sqlite:///./grievances.db
+      - OLLAMA_URL=http://host.docker.internal:11434/api/generate
+      - OLLAMA_MODEL=qwen2.5:3b
+      - OLLAMA_TIMEOUT_SECONDS=30
+      - JWT_SECRET=${JWT_SECRET:-grievance-admin-secret-key-super-secure-2026-prod}
+      - JWT_ALGORITHM=HS256
+      - JWT_EXPIRATION_MINUTES=1440
+      - DEFAULT_ADMIN_USERNAME=${DEFAULT_ADMIN_USERNAME:-admin}
+      - DEFAULT_ADMIN_PASSWORD=${DEFAULT_ADMIN_PASSWORD:-Admin@Grievance2026}
+    volumes:
+      # Persistent SQLite database and user media attachments
+      - ./grievances.db:/app/grievances.db
+      - ./uploads:/app/uploads
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # ----------------------------------------------------------------------------
+  # Citizen Grievance Portal Frontend (Public Access)
+  # ----------------------------------------------------------------------------
+  citizen-portal:
+    build:
+      context: .
+      dockerfile: citizen-frontend/Dockerfile
+      args:
+        - VITE_API_URL=${CITIZEN_VITE_API_URL:-http://localhost:8000}
+    container_name: grievance_citizen_portal
+    restart: unless-stopped
+    ports:
+      - "5173:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------------------
+  # Administrative Dashboard Frontend (Official Operations)
+  # ----------------------------------------------------------------------------
+  admin-portal:
+    build:
+      context: .
+      dockerfile: admin-frontend/Dockerfile
+      args:
+        - VITE_API_URL=${ADMIN_VITE_API_URL:-http://localhost:8000}
+    container_name: grievance_admin_portal
+    restart: unless-stopped
+    ports:
+      - "5174:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+# Persistent named volumes for production data resilience
+volumes:
+  grievance_data:
+  grievance_uploads:

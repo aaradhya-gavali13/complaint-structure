@@ -1,0 +1,61 @@
+# Git & Version Control
+.git
+.gitignore
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Node.js artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Huge Local Datasets and Model checkpoints (Exclude from container images)
+complaints.csv
+complaints_clean_100k.csv
+complaint_issue_model.pkl
+*.csv
+*.pkl
+*.tar.gz
+*.zip
+
+# Local SQLite databases & test scripts (Database will be mounted as persistent volume)
+*.sqlite
+*.sqlite3
+test_*.py
+scratch_*.py
+
+# Environment variables & editor files
+.env
+.env.local
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
