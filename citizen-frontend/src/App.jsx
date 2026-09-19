@@ -8,6 +8,7 @@ import TrackComplaintPage from "./pages/TrackComplaintPage";
 import AboutHelpPage from "./pages/AboutHelpPage";
 import MyComplaintsPage from "./pages/MyComplaintsPage";
 import CitizenAuthModal from "./components/CitizenAuthModal";
+import MobileBottomNav from "./components/MobileBottomNav";
 import {
   getStoredCitizenUser,
   fetchCurrentCitizen,
@@ -128,6 +129,14 @@ export default function App() {
       </main>
 
       <Footer setActivePage={setActivePage} />
+
+      {/* Mobile-First Bottom Navigation Bar for Smart Phones */}
+      <MobileBottomNav
+        activePage={activePage}
+        setActivePage={setActivePage}
+        user={citizenUser}
+        onOpenAuth={handleOpenAuth}
+      />
 
       {/* Citizen Authentication Modal */}
       <CitizenAuthModal

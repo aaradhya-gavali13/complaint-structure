@@ -140,34 +140,44 @@ export default function Navbar({
                     <span>{user.user_id}</span>
                   </div>
                   <button
-                    onClick={onLogout}
+                    onClick={() => {
+                      onLogout();
+                      setMobileMenuOpen(false);
+                    }}
                     className="btn btn-secondary"
                     style={{
-                      padding: "0.35rem 0.65rem",
-                      fontSize: "0.8rem",
+                      padding: "0.45rem 0.75rem",
+                      fontSize: "0.82rem",
                       display: "inline-flex",
                       alignItems: "center",
                       gap: "0.3rem",
+                      minHeight: "40px",
                     }}
                     title="Sign Out"
                   >
-                    <LogOut size={13} />
+                    <LogOut size={14} />
                     <span>Logout</span>
                   </button>
                 </div>
               ) : (
                 <button
-                  onClick={() => onOpenAuth("login")}
+                  onClick={() => {
+                    onOpenAuth("login");
+                    setMobileMenuOpen(false);
+                  }}
                   className="btn btn-secondary"
                   style={{
                     display: "inline-flex",
                     alignItems: "center",
+                    justifyContent: "center",
                     gap: "0.4rem",
-                    fontSize: "0.85rem",
+                    fontSize: "0.9rem",
                     fontWeight: 600,
+                    width: "100%",
+                    minHeight: "44px",
                   }}
                 >
-                  <LogIn size={15} />
+                  <LogIn size={16} />
                   <span>Citizen Sign In</span>
                 </button>
               )}
