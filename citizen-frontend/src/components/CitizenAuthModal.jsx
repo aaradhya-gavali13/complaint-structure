@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { X, Lock, User, Phone, CheckCircle2, AlertCircle, Loader2, Eye, EyeOff, ArrowLeft, KeyRound } from "./Icons";
 import { citizenLogin, citizenRegister, citizenForgotPassword } from "../api";
 
@@ -6,6 +6,15 @@ export default function CitizenAuthModal({ isOpen, onClose, onAuthSuccess, initi
   const [mode, setMode] = useState(initialMode); // "login", "register", or "forgot"
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // Sync mode whenever modal opens or initialMode changes
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode || "login");
+      setError("");
+      setForgotSuccessMsg("");
+    }
+  }, [isOpen, initialMode]);
 
   // Visibility toggle states
   const [showLoginPassword, setShowLoginPassword] = useState(false);
@@ -29,7 +38,6 @@ export default function CitizenAuthModal({ isOpen, onClose, onAuthSuccess, initi
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [forgotSuccessMsg, setForgotSuccessMsg] = useState("");
-
 
   if (!isOpen) return null;
 
@@ -189,95 +197,92 @@ export default function CitizenAuthModal({ isOpen, onClose, onAuthSuccess, initi
           </button>
         </div>
 
-        {/* Tab Selector / Recovery Header */}
-        {mode === "forgot" ? (
-          <div
+        {/* 3 Prominent Navigation Tabs: Sign In, New Register, and Forgot Password */}
+        <div
+          style={{
+            display: "flex",
+            borderBottom: "1px solid #e2e8f0",
+            backgroundColor: "#f8fafc",
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError("");
+              setForgotSuccessMsg("");
+            }}
             style={{
+              flex: 1,
+              padding: "0.85rem 0.5rem",
+              border: "none",
+              borderBottom: mode === "login" ? "2px solid #134074" : "2px solid transparent",
+              background: mode === "login" ? "#ffffff" : "transparent",
+              fontWeight: mode === "login" ? 700 : 500,
+              color: mode === "login" ? "#0b2545" : "#64748b",
+              cursor: "pointer",
+              fontSize: "0.86rem",
+              textAlign: "center",
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              padding: "0.85rem 1.25rem",
-              borderBottom: "1px solid #e2e8f0",
-              backgroundColor: "#f8fafc",
+              justifyContent: "center",
+              gap: "0.35rem",
             }}
           >
-            <button
-              type="button"
-              onClick={() => {
-                setMode("login");
-                setError("");
-                setForgotSuccessMsg("");
-              }}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#1d4ed8",
-                fontSize: "0.85rem",
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                padding: 0,
-              }}
-            >
-              <ArrowLeft size={16} />
-              <span>Back to Sign In</span>
-            </button>
-            <span style={{ fontSize: "0.85rem", color: "#64748b", fontWeight: 600 }}>
-              Password Recovery
-            </span>
-          </div>
-        ) : (
-          <div
+            <User size={15} />
+            <span>Sign In</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("register");
+              setError("");
+              setForgotSuccessMsg("");
+            }}
             style={{
-              display: "flex",
-              borderBottom: "1px solid #e2e8f0",
-              backgroundColor: "#f8fafc",
+              flex: 1,
+              padding: "0.85rem 0.5rem",
+              border: "none",
+              borderBottom: mode === "register" ? "2px solid #134074" : "2px solid transparent",
+              background: mode === "register" ? "#ffffff" : "transparent",
+              fontWeight: mode === "register" ? 700 : 500,
+              color: mode === "register" ? "#0b2545" : "#64748b",
+              cursor: "pointer",
+              fontSize: "0.86rem",
+              textAlign: "center",
             }}
           >
-            <button
-              type="button"
-              onClick={() => {
-                setMode("login");
-                setError("");
-              }}
-              style={{
-                flex: 1,
-                padding: "0.85rem",
-                border: "none",
-                borderBottom: mode === "login" ? "2px solid #134074" : "2px solid transparent",
-                background: mode === "login" ? "#ffffff" : "transparent",
-                fontWeight: mode === "login" ? 700 : 500,
-                color: mode === "login" ? "#0b2545" : "#64748b",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-              }}
-            >
-              Sign In with User ID
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setMode("register");
-                setError("");
-              }}
-              style={{
-                flex: 1,
-                padding: "0.85rem",
-                border: "none",
-                borderBottom: mode === "register" ? "2px solid #134074" : "2px solid transparent",
-                background: mode === "register" ? "#ffffff" : "transparent",
-                fontWeight: mode === "register" ? 700 : 500,
-                color: mode === "register" ? "#0b2545" : "#64748b",
-                cursor: "pointer",
-                fontSize: "0.9rem",
-              }}
-            >
-              New Citizen Registration
-            </button>
-          </div>
-        )}
+            New Register
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setForgotUserId(loginUserId);
+              setMode("forgot");
+              setError("");
+              setForgotSuccessMsg("");
+            }}
+            style={{
+              flex: 1,
+              padding: "0.85rem 0.5rem",
+              border: "none",
+              borderBottom: mode === "forgot" ? "2px solid #1d4ed8" : "2px solid transparent",
+              background: mode === "forgot" ? "#ffffff" : "transparent",
+              fontWeight: mode === "forgot" ? 700 : 500,
+              color: mode === "forgot" ? "#1d4ed8" : "#64748b",
+              cursor: "pointer",
+              fontSize: "0.86rem",
+              textAlign: "center",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "0.35rem",
+            }}
+          >
+            <KeyRound size={15} />
+            <span>Forgot Password?</span>
+          </button>
+        </div>
 
         {/* Modal Body */}
         <div style={{ padding: "1.5rem" }}>
@@ -590,26 +595,52 @@ export default function CitizenAuthModal({ isOpen, onClose, onAuthSuccess, initi
                 )}
               </button>
 
-              <p
+              <div
                 style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "0.5rem",
+                  marginTop: "1.25rem",
                   textAlign: "center",
-                  fontSize: "0.82rem",
-                  color: "#64748b",
-                  marginTop: "1rem",
-                  marginBottom: 0,
+                  fontSize: "0.85rem",
                 }}
               >
-                First time filing a complaint?{" "}
-                <strong
-                  style={{ color: "#134074", cursor: "pointer", textDecoration: "underline" }}
-                  onClick={() => {
-                    setMode("register");
-                    setError("");
-                  }}
-                >
-                  Create an account here
-                </strong>
-              </p>
+                <div style={{ color: "#475569" }}>
+                  Forgot your password?{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForgotUserId(loginUserId);
+                      setMode("forgot");
+                      setError("");
+                      setForgotSuccessMsg("");
+                    }}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#1d4ed8",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                      padding: 0,
+                    }}
+                  >
+                    Reset with Mobile Number
+                  </button>
+                </div>
+                <div style={{ color: "#64748b", fontSize: "0.82rem" }}>
+                  First time filing a complaint?{" "}
+                  <strong
+                    style={{ color: "#134074", cursor: "pointer", textDecoration: "underline" }}
+                    onClick={() => {
+                      setMode("register");
+                      setError("");
+                    }}
+                  >
+                    Create an account here
+                  </strong>
+                </div>
+              </div>
             </form>
           ) : (
             <form onSubmit={handleRegister}>
