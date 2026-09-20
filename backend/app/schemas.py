@@ -45,6 +45,12 @@ class CitizenLoginRequest(BaseModel):
     password: str = Field(..., description="Password")
 
 
+class CitizenForgotPasswordRequest(BaseModel):
+    user_id: str = Field(..., description="Citizen User ID, Username, or registered Phone")
+    phone: str = Field(..., description="Registered contact phone number")
+    new_password: str = Field(..., min_length=6, max_length=128, description="New account password")
+
+
 class CitizenResponse(BaseModel):
     id: Optional[int] = None
     user_id: str

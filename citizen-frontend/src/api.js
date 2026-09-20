@@ -58,6 +58,19 @@ export async function citizenLogin(credentials) {
   return result;
 }
 
+export async function citizenForgotPassword(data) {
+  const response = await fetch(`${API_BASE_URL}/citizen/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || "Failed to reset password. Please check your details.");
+  }
+  return result;
+}
+
 export async function fetchCurrentCitizen() {
   const token = getStoredCitizenToken();
   if (!token) return null;

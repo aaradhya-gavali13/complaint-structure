@@ -20,6 +20,7 @@ from backend.app.models import Complaint, StatusHistory, CitizenUser
 from backend.app.schemas import (
     CitizenRegisterRequest,
     CitizenLoginRequest,
+    CitizenForgotPasswordRequest,
     CitizenResponse,
     CitizenTokenResponse,
     ComplaintCreateRequest,
@@ -250,6 +251,88 @@ def citizen_login(
             created_at=citizen.created_at
         )
     )
+
+
+@app.post(
+    "/citizen/forgot-password",
+    summary="Reset citizen password with User ID and registered phone number verification"
+)
+def citizen_forgot_password(
+    payload: CitizenForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    clean_user_id = payload.user_id.strip().lower()
+    clean_phone = payload.phone.strip()
+    clean_new_password = payload.new_password.strip()
+
+    if len(clean_new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters long."
+        )
+
+    # Enforce reserved password check
+    if clean_new_password == DEFAULT_ADMIN_PASS or clean_new_password == "Admin@Grievance2026":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password is reserved. Please choose a different password."
+        )
+
+    # Locate citizen by user_id or registered phone number
+    citizen = db.query(CitizenUser).filter(
+        or_(
+            CitizenUser.user_id == clean_user_id,
+            CitizenUser.phone == clean_phone,
+            CitizenUser.phone == clean_user_id
+        )
+    ).first()
+
+    if not citizen:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Citizen account not found. Please verify your User ID or Mobile Phone number."
+        )
+
+    # Verify phone number match (clean digits)
+    input_digits = "".join(filter(str.isdigit, clean_phone))
+    stored_digits = "".join(filter(str.isdigit, citizen.phone))
+
+    if input_digits and stored_digits:
+        # Match if either is a substring of the other (e.g. 9876543210 vs +919876543210)
+        if input_digits not in stored_digits and stored_digits not in input_digits:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The provided mobile number does not match the registered number for this Citizen User ID."
+            )
+    else:
+        if clean_phone.lower() != citizen.phone.lower():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="The provided mobile number does not match the registered record."
+            )
+
+    # Check password uniqueness across other citizen accounts
+    existing_pass = db.query(CitizenUser).filter(
+        CitizenUser.password_display == clean_new_password,
+        CitizenUser.id != citizen.id
+    ).first()
+    if existing_pass:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This password is used by another account. Please choose a unique password."
+        )
+
+    citizen.password_hash = hash_password(clean_new_password)
+    citizen.password_display = clean_new_password
+    db.commit()
+    db.refresh(citizen)
+
+    logger.info("Password successfully reset for citizen %s", citizen.user_id)
+    return {
+        "success": True,
+        "message": f"Password reset successfully for User ID '{citizen.user_id}'. You can now log in.",
+        "user_id": citizen.user_id
+    }
 
 
 @app.get(
