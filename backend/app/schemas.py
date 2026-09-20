@@ -278,6 +278,14 @@ class OfficerAssignRequest(BaseModel):
     officer_name: str = Field(..., min_length=2, max_length=128)
     officer_phone: Optional[str] = Field("", max_length=32)
     sla_hours: Optional[int] = Field(48, ge=1, le=720, description="Hours until SLA breach")
+    send_sms: Optional[bool] = Field(True, description="Whether to dispatch direct SMS/notification to officer")
+    custom_message: Optional[str] = Field(None, description="Optional directive or note for the officer")
+
+
+class OfficerDirectMessageRequest(BaseModel):
+    officer_phone: Optional[str] = Field(None, max_length=32)
+    custom_message: Optional[str] = Field(None, max_length=1000)
+
 
 
 class BulkStatusUpdateRequest(BaseModel):

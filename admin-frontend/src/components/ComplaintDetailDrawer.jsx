@@ -15,9 +15,14 @@ import {
   Camera,
   Upload,
   UserCheck,
+  MessageSquare,
+  Send,
+  Copy,
+  ExternalLink,
 } from "./Icons";
 import {
   assignOfficer,
+  sendOfficerDirectMessage,
   uploadResolutionProof,
   getMediaUrl,
 } from "../api";
@@ -32,12 +37,18 @@ export default function ComplaintDetailDrawer({
   const [adminNotes, setAdminNotes] = useState("");
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
-  // Officer Assignment State
+  // Officer Assignment & Direct Messaging State
   const [officerName, setOfficerName] = useState(complaint?.assigned_officer_name || "");
   const [officerPhone, setOfficerPhone] = useState(complaint?.assigned_officer_phone || "");
   const [slaHours, setSlaHours] = useState(48);
+  const [sendSmsAlert, setSendSmsAlert] = useState(true);
+  const [customDirective, setCustomDirective] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [assignSuccess, setAssignSuccess] = useState(false);
+  const [directMessageResult, setDirectMessageResult] = useState(null);
+  const [isSendingDirectMsg, setIsSendingDirectMsg] = useState(false);
+  const [copiedText, setCopiedText] = useState(false);
+  const [showMsgPreview, setShowMsgPreview] = useState(false);
 
   // Resolution Proof Upload State
   const [resolutionProofFile, setResolutionProofFile] = useState(null);
@@ -95,13 +106,18 @@ export default function ComplaintDetailDrawer({
     }
     setIsAssigning(true);
     try {
-      await assignOfficer(complaint.complaint_id, {
+      const res = await assignOfficer(complaint.complaint_id, {
         officer_name: officerName.trim(),
         officer_phone: officerPhone.trim() || undefined,
         sla_hours: Number(slaHours) || 48,
+        send_sms: sendSmsAlert,
+        custom_message: customDirective.trim() || undefined,
       });
+      if (res && res.direct_message) {
+        setDirectMessageResult(res.direct_message);
+      }
       setAssignSuccess(true);
-      setTimeout(() => setAssignSuccess(false), 3000);
+      setTimeout(() => setAssignSuccess(false), 4000);
       // Refresh status via parent callback
       onStatusUpdate(complaint.complaint_id, complaint.status, `Assigned to ${officerName}`);
     } catch (err) {
@@ -109,6 +125,61 @@ export default function ComplaintDetailDrawer({
     } finally {
       setIsAssigning(false);
     }
+  };
+
+  const handleManualSendDirectMessage = async () => {
+    const phone = officerPhone.trim() || complaint.assigned_officer_phone;
+    if (!phone) {
+      alert("Please provide the officer's mobile number first.");
+      return;
+    }
+    setIsSendingDirectMsg(true);
+    try {
+      const res = await sendOfficerDirectMessage(complaint.complaint_id, {
+        officer_phone: phone,
+        custom_message: customDirective.trim() || undefined,
+      });
+      if (res && res.direct_message) {
+        setDirectMessageResult(res.direct_message);
+      }
+      alert(`Direct notification successfully sent to ${phone}`);
+    } catch (err) {
+      alert("Failed to dispatch direct message: " + err.message);
+    } finally {
+      setIsSendingDirectMsg(false);
+    }
+  };
+
+  const activePhone = officerPhone.trim() || complaint.assigned_officer_phone || "";
+
+  const getWhatsAppUrl = () => {
+    if (directMessageResult?.whatsapp_url) return directMessageResult.whatsapp_url;
+    if (!activePhone) return null;
+    const clean = activePhone.replace(/[^\d+]/g, "").replace("+", "");
+    const cleanInt = clean.length === 10 ? `91${clean}` : clean;
+    const text = encodeURIComponent(
+      `🏛️ [GOVT GRIEVANCE NOTICE]\nOfficer ${officerName || complaint.assigned_officer_name || ""},\nYou have been assigned Case #${complaint.complaint_id}.\nDepartment: ${complaint.department || "General Administration"}\nPriority: ${complaint.priority || "MEDIUM"} | SLA: ${slaHours} Hours.\nSummary: "${(complaint.complaint_text || "").slice(0, 120)}..."\nPlease review details and act promptly.`
+    );
+    return `https://wa.me/${cleanInt}?text=${text}`;
+  };
+
+  const getSmsUrl = () => {
+    if (directMessageResult?.sms_url) return directMessageResult.sms_url;
+    if (!activePhone) return null;
+    const clean = activePhone.replace(/[^\d+]/g, "");
+    const text = encodeURIComponent(
+      `🏛️ [GOVT GRIEVANCE ALERT] Case #${complaint.complaint_id} assigned to Officer ${officerName || complaint.assigned_officer_name || ""}. Dept: ${complaint.department || "Admin"}. Priority: ${complaint.priority || "MEDIUM"}. SLA: ${slaHours}h.`
+    );
+    return `sms:${clean}?body=${text}`;
+  };
+
+  const handleCopyNotice = () => {
+    const text = directMessageResult?.message_text || (
+      `🏛️ [OFFICIAL NOTICE - NATIONAL GRIEVANCE REDRESSAL]\nCase ID: #${complaint.complaint_id}\nAssigned Officer: ${officerName || complaint.assigned_officer_name}\nDepartment: ${complaint.department}\nPriority: ${complaint.priority}\nSLA Window: ${slaHours} Hours\nCitizen Grievance: "${complaint.complaint_text}"`
+    );
+    navigator.clipboard.writeText(text);
+    setCopiedText(true);
+    setTimeout(() => setCopiedText(false), 2500);
   };
 
   const formatDate = (isoString) => {
@@ -393,7 +464,34 @@ export default function ComplaintDetailDrawer({
               </div>
             </div>
 
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.75rem" }}>
+            <div className="form-field-group" style={{ marginTop: "0.6rem" }}>
+              <label style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Special Directive / Briefing Note (Optional)</span>
+                <span style={{ fontSize: "0.7rem", color: "#64748b" }}>Appended to direct message</span>
+              </label>
+              <input
+                type="text"
+                placeholder="e.g. Urgent on-site inspection requested before 5 PM."
+                value={customDirective}
+                onChange={(e) => setCustomDirective(e.target.value)}
+                className="status-form-input"
+              />
+            </div>
+
+            <div style={{ marginTop: "0.6rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <input
+                type="checkbox"
+                id="sendSmsAlertCheck"
+                checked={sendSmsAlert}
+                onChange={(e) => setSendSmsAlert(e.target.checked)}
+                style={{ cursor: "pointer", width: "15px", height: "15px", accentColor: "#8b5cf6" }}
+              />
+              <label htmlFor="sendSmsAlertCheck" style={{ fontSize: "0.8rem", color: "#cbd5e1", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                <span>📱 Automatically dispatch direct message / SMS to officer's number</span>
+              </label>
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.85rem" }}>
               <div style={{ fontSize: "0.75rem", color: "#94a3b8" }}>
                 {complaint.sla_due_date ? (
                   <span>SLA Due: <strong>{formatDate(complaint.sla_due_date)}</strong></span>
@@ -408,9 +506,104 @@ export default function ComplaintDetailDrawer({
                 style={{ backgroundColor: "#8b5cf6" }}
               >
                 {isAssigning ? <Loader2 size={13} className="animate-spin" /> : <UserCheck size={13} />}
-                <span>{assignSuccess ? "Assigned!" : "Assign Field Officer"}</span>
+                <span>{assignSuccess ? "Assigned & Alerted!" : "Assign Field Officer & Alert"}</span>
               </button>
             </div>
+
+            {/* Direct Officer Messaging & Communication Toolbar */}
+            {activePhone && (
+              <div className="officer-direct-msg-card">
+                <div className="officer-msg-header">
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.45rem" }}>
+                    <MessageSquare size={14} color="#38bdf8" />
+                    <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.82rem" }}>
+                      Direct Officer Notification: {activePhone}
+                    </span>
+                  </div>
+                  {directMessageResult?.sent && (
+                    <span className="dispatch-badge-success">
+                      ✓ Dispatched via {directMessageResult.provider || "SMS Router"}
+                    </span>
+                  )}
+                </div>
+
+                <div className="officer-dispatch-toolbar">
+                  {getWhatsAppUrl() && (
+                    <a
+                      href={getWhatsAppUrl()}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="btn-dispatch-channel btn-whatsapp"
+                      title="Send pre-filled case assignment notice via WhatsApp"
+                    >
+                      <Send size={13} />
+                      <span>WhatsApp Direct</span>
+                      <ExternalLink size={11} />
+                    </a>
+                  )}
+
+                  {getSmsUrl() && (
+                    <a
+                      href={getSmsUrl()}
+                      className="btn-dispatch-channel btn-sms"
+                      title="Launch device SMS app"
+                    >
+                      <Phone size={13} />
+                      <span>Device SMS</span>
+                    </a>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleCopyNotice}
+                    className="btn-dispatch-channel btn-copy"
+                    title="Copy official assignment notice to clipboard"
+                  >
+                    {copiedText ? <Check size={13} color="#4ade80" /> : <Copy size={13} />}
+                    <span>{copiedText ? "Copied!" : "Copy Notice"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleManualSendDirectMessage}
+                    disabled={isSendingDirectMsg}
+                    className="btn-dispatch-channel btn-resend"
+                    title="Send follow-up direct notification from server"
+                  >
+                    {isSendingDirectMsg ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                    <span>{isSendingDirectMsg ? "Sending..." : "Re-send Alert"}</span>
+                  </button>
+                </div>
+
+                <div style={{ marginTop: "0.5rem" }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowMsgPreview(!showMsgPreview)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#94a3b8",
+                      fontSize: "0.75rem",
+                      cursor: "pointer",
+                      padding: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.3rem",
+                    }}
+                  >
+                    <span>{showMsgPreview ? "▾ Hide Notice Preview" : "▸ View Official SMS / Notice Message Preview"}</span>
+                  </button>
+
+                  {showMsgPreview && (
+                    <pre className="officer-msg-preview-box">
+                      {directMessageResult?.message_text || (
+                        `🏛️ [OFFICIAL NOTICE - NATIONAL GRIEVANCE REDRESSAL]\nCase ID: #${complaint.complaint_id}\nDear Officer ${officerName || complaint.assigned_officer_name || ""},\nYou have been assigned Case #${complaint.complaint_id}.\nDepartment: ${complaint.department || "General Administration"}\nPriority: ${complaint.priority || "MEDIUM"}\nSLA Target: ${slaHours} Hours\nGrievance Brief: "${(complaint.complaint_text || "").slice(0, 140)}..."\n${customDirective ? "Directive: " + customDirective + "\n" : ""}Please inspect and submit action report.`
+                      )}
+                    </pre>
+                  )}
+                </div>
+              </div>
+            )}
           </form>
 
           {/* Section 5: Citizen Feedback & Rating (if rated) */}

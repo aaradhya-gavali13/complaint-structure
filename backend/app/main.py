@@ -37,6 +37,7 @@ from backend.app.schemas import (
     AdminComplaintDetailResponse,
     AdminStatusUpdateRequest,
     OfficerAssignRequest,
+    OfficerDirectMessageRequest,
     BulkStatusUpdateRequest,
     AdminPasswordResetRequest,
     AdminToggleStatusRequest,
@@ -45,6 +46,14 @@ from backend.app.schemas import (
     PaginatedComplaintsResponse,
     AdminCitizenItemResponse,
     AdminCitizensListResponse,
+)
+
+from backend.app.notifications import (
+    clean_phone_number,
+    build_officer_assignment_message,
+    build_whatsapp_url,
+    build_sms_url,
+    dispatch_officer_sms,
 )
 
 from backend.app.id_generator import generate_complaint_id
@@ -1037,6 +1046,44 @@ def assign_complaint_officer(
         changed_by=admin_name
     ))
 
+    # Automatic Direct Message & SMS Dispatch to Officer's Number
+    direct_msg_info = None
+    if complaint.assigned_officer_phone:
+        msg_body = build_officer_assignment_message(
+            complaint_id=clean_id,
+            officer_name=complaint.assigned_officer_name,
+            department=complaint.department,
+            category=complaint.issue or "Public Grievance",
+            priority=complaint.priority,
+            sla_hours=hours,
+            sla_due_date=complaint.sla_due_date,
+            complaint_text=complaint.complaint_text,
+            custom_message=payload.custom_message,
+        )
+        wa_url = build_whatsapp_url(complaint.assigned_officer_phone, msg_body)
+        sms_url = build_sms_url(complaint.assigned_officer_phone, msg_body)
+
+        sms_dispatch_res = None
+        if payload.send_sms is not False:
+            sms_dispatch_res = dispatch_officer_sms(complaint.assigned_officer_phone, msg_body)
+            provider_label = sms_dispatch_res.get("provider", "Direct SMS Router")
+            db.add(StatusHistory(
+                complaint_id=clean_id,
+                old_status=complaint.status,
+                new_status=complaint.status,
+                admin_note=f"Direct SMS alert dispatched to Officer {complaint.assigned_officer_name} ({complaint.assigned_officer_phone}) via {provider_label}.",
+                changed_by="SYSTEM"
+            ))
+
+        direct_msg_info = {
+            "sent": bool(sms_dispatch_res and sms_dispatch_res.get("success")),
+            "provider": sms_dispatch_res.get("provider") if sms_dispatch_res else "Direct Gateway",
+            "recipient": complaint.assigned_officer_phone,
+            "message_text": msg_body,
+            "whatsapp_url": wa_url,
+            "sms_url": sms_url,
+        }
+
     db.commit()
     db.refresh(complaint)
 
@@ -1045,8 +1092,76 @@ def assign_complaint_officer(
         "assigned_officer_name": complaint.assigned_officer_name,
         "assigned_officer_phone": complaint.assigned_officer_phone,
         "sla_due_date": complaint.sla_due_date.isoformat() if complaint.sla_due_date else None,
-        "message": f"Successfully assigned to {complaint.assigned_officer_name}"
+        "message": f"Successfully assigned to {complaint.assigned_officer_name}",
+        "direct_message": direct_msg_info
     }
+
+
+@app.post(
+    "/admin/complaints/{complaint_id}/send-officer-message",
+    summary="Directly send or re-send notification message to the assigned officer"
+)
+def send_officer_message(
+    complaint_id: str,
+    payload: OfficerDirectMessageRequest,
+    db: Session = Depends(get_db),
+    current_admin: dict = Depends(get_current_admin)
+):
+    clean_id = complaint_id.strip().upper()
+    complaint = db.query(Complaint).filter(Complaint.complaint_id == clean_id).first()
+    if not complaint:
+        raise HTTPException(status_code=404, detail="Complaint not found.")
+
+    target_phone = payload.officer_phone.strip() if payload.officer_phone else complaint.assigned_officer_phone
+    if not target_phone:
+        raise HTTPException(status_code=400, detail="Officer phone number not specified or on file.")
+
+    target_name = complaint.assigned_officer_name or "Officer"
+    hours = 48
+    if complaint.sla_due_date:
+        diff = (complaint.sla_due_date - datetime.utcnow()).total_seconds() / 3600
+        hours = max(1, int(diff))
+
+    msg = build_officer_assignment_message(
+        complaint_id=clean_id,
+        officer_name=target_name,
+        department=complaint.department,
+        category=complaint.issue or "Public Grievance",
+        priority=complaint.priority,
+        sla_hours=hours,
+        sla_due_date=complaint.sla_due_date,
+        complaint_text=complaint.complaint_text,
+        custom_message=payload.custom_message,
+    )
+
+    sms_res = dispatch_officer_sms(target_phone, msg)
+    wa_url = build_whatsapp_url(target_phone, msg)
+    sms_url = build_sms_url(target_phone, msg)
+
+    admin_name = current_admin.get("full_name") or current_admin.get("username", "admin")
+    db.add(StatusHistory(
+        complaint_id=clean_id,
+        old_status=complaint.status,
+        new_status=complaint.status,
+        admin_note=f"Direct message re-sent to Officer {target_name} at {target_phone} by {admin_name}.",
+        changed_by=admin_name
+    ))
+    db.commit()
+
+    return {
+        "status": "ok",
+        "recipient": target_phone,
+        "officer_name": target_name,
+        "direct_message": {
+            "sent": sms_res.get("success", True),
+            "provider": sms_res.get("provider", "Direct Gateway"),
+            "message_text": msg,
+            "whatsapp_url": wa_url,
+            "sms_url": sms_url,
+        },
+        "message": f"Direct notification successfully dispatched to {target_phone}."
+    }
+
 
 
 @app.post(

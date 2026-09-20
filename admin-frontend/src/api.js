@@ -197,6 +197,14 @@ export async function assignOfficer(complaintId, payload) {
   });
 }
 
+export async function sendOfficerDirectMessage(complaintId, payload = {}) {
+  const cleanId = encodeURIComponent(complaintId.trim().toUpperCase());
+  return authFetch(`/admin/complaints/${cleanId}/send-officer-message`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function resetCitizenPassword(userId, payload) {
   const cleanId = encodeURIComponent(userId.trim());
   return authFetch(`/admin/citizens/${cleanId}/reset-password`, {
