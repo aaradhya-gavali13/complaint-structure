@@ -62,3 +62,5 @@ export function StatusBadge({ status }) {
 export function PriorityBadge() {
   return null;
 }
+
+export default StatusBadge;

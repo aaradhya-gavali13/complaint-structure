@@ -21,10 +21,12 @@ import {
   Camera,
   Check,
   MapPin,
+  HelpCircle,
 } from "../components/Icons";
 import { trackComplaint, submitCitizenFeedback, getMediaUrl } from "../api";
 import { StatusBadge } from "../components/StatusBadge";
 import OfficialReceiptModal from "../components/OfficialReceiptModal";
+import FindGrievanceModal from "../components/FindGrievanceModal";
 
 export default function TrackComplaintPage({
   initialTrackId,
@@ -37,6 +39,7 @@ export default function TrackComplaintPage({
   const [error, setError] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showFindModal, setShowFindModal] = useState(false);
 
   // Feedback rating states
   const [feedbackRating, setFeedbackRating] = useState(5);
@@ -206,8 +209,42 @@ export default function TrackComplaintPage({
                 )}
               </button>
             </div>
-            <div className="helper-text" style={{ marginTop: "0.5rem" }}>
-              Case-insensitive. Look up the ID provided in your official submission acknowledgment.
+            <div
+              style={{
+                marginTop: "0.75rem",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: "0.6rem",
+              }}
+            >
+              <div className="helper-text" style={{ margin: 0 }}>
+                Case-insensitive. Look up the ID provided in your official submission acknowledgment.
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFindModal(true)}
+                style={{
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: "6px",
+                  color: "#1d4ed8",
+                  fontSize: "0.85rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  padding: "0.4rem 0.75rem",
+                  transition: "all 0.15s ease",
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#dbeafe")}
+                onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#eff6ff")}
+              >
+                <HelpCircle size={15} />
+                <span>Forgot Grievance ID? Find by Mobile Number</span>
+              </button>
             </div>
           </form>
         </div>
@@ -776,6 +813,16 @@ export default function TrackComplaintPage({
           onClose={() => setShowReceiptModal(false)}
         />
       )}
+
+      {/* Find Grievance Number by Mobile / Citizen ID Modal */}
+      <FindGrievanceModal
+        isOpen={showFindModal}
+        onClose={() => setShowFindModal(false)}
+        onSelectComplaint={(selectedId) => {
+          setComplaintId(selectedId);
+          performSearch(selectedId);
+        }}
+      />
     </div>
   );
 }

@@ -408,6 +408,53 @@ def submit_complaint(
         created_at=new_complaint.created_at
     )
 
+@app.get(
+    "/complaints/lookup/by-contact",
+    summary="Find Grievance Registration Numbers by Mobile Number or Citizen User ID"
+)
+def lookup_complaints_by_contact(
+    query: str = Query(..., description="Mobile number or Citizen User ID"),
+    db: Session = Depends(get_db)
+):
+    clean_query = query.strip()
+    if len(clean_query) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please provide at least 3 characters or digits to search."
+        )
+
+    # Clean digits for flexible mobile phone match
+    cleaned_digits = "".join(filter(str.isdigit, clean_query))
+
+    filter_conditions = [
+        Complaint.phone.ilike(f"%{clean_query}%"),
+        Complaint.citizen_user_id.ilike(f"%{clean_query}%"),
+        Complaint.name.ilike(f"%{clean_query}%"),
+    ]
+    if cleaned_digits and len(cleaned_digits) >= 4:
+        filter_conditions.append(Complaint.phone.ilike(f"%{cleaned_digits}%"))
+
+    matches = (
+        db.query(Complaint)
+        .filter(or_(*filter_conditions))
+        .order_by(Complaint.id.desc())
+        .limit(20)
+        .all()
+    )
+
+    return [
+        {
+            "complaint_id": c.complaint_id,
+            "status": c.status,
+            "department": c.department or "Under Department Assignment",
+            "created_at": c.created_at.isoformat() if c.created_at else None,
+            "citizen_name": c.name,
+            "issue": c.issue or (c.complaint_text[:60] + "..." if len(c.complaint_text) > 60 else c.complaint_text),
+            "phone_masked": f"{c.phone[:2]}******{c.phone[-2:]}" if len(c.phone) >= 6 else c.phone
+        }
+        for c in matches
+    ]
+
 
 @app.get(
     "/complaints/{complaint_id}",

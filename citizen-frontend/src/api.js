@@ -149,6 +149,19 @@ export async function trackComplaint(complaintId) {
   }
 }
 
+export async function lookupComplaintsByContact(query) {
+  const cleanQuery = encodeURIComponent(query.trim());
+  const response = await fetch(`${API_BASE_URL}/complaints/lookup/by-contact?query=${cleanQuery}`, {
+    method: "GET",
+    headers: { Accept: "application/json" },
+  });
+  const result = await response.json();
+  if (!response.ok) {
+    throw new Error(result.detail || "Unable to search for complaints.");
+  }
+  return result;
+}
+
 export async function fetchMyComplaints() {
   const token = getStoredCitizenToken();
   if (!token) throw new Error("Please log in to view your filed grievances.");

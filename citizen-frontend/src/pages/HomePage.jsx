@@ -12,9 +12,11 @@ import {
   HelpCircle,
   PhoneCall,
 } from "../components/Icons";
+import FindGrievanceModal from "../components/FindGrievanceModal";
 
 export default function HomePage({ setActivePage, setTrackId }) {
   const [quickTrackInput, setQuickTrackInput] = React.useState("");
+  const [showFindModal, setShowFindModal] = React.useState(false);
 
   const handleQuickTrack = (e) => {
     e.preventDefault();
@@ -91,6 +93,29 @@ export default function HomePage({ setActivePage, setTrackId }) {
                   <ArrowRight size={18} />
                 </button>
               </form>
+
+              <div style={{ marginTop: "0.6rem", display: "flex", justifyContent: "flex-end" }}>
+                <button
+                  type="button"
+                  onClick={() => setShowFindModal(true)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "rgba(255, 255, 255, 0.95)",
+                    fontSize: "0.8rem",
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "0.35rem",
+                    padding: 0,
+                    fontWeight: 500,
+                  }}
+                >
+                  <Search size={13} />
+                  <span>Forgot Grievance ID? Find by Mobile Number</span>
+                </button>
+              </div>
 
               <div className="hero-stats-row">
                 <div className="stat-item">
@@ -226,6 +251,17 @@ export default function HomePage({ setActivePage, setTrackId }) {
           </div>
         </section>
       </div>
+
+      {/* Find Grievance Number Modal */}
+      <FindGrievanceModal
+        isOpen={showFindModal}
+        onClose={() => setShowFindModal(false)}
+        onSelectComplaint={(selectedId) => {
+          setShowFindModal(false);
+          setTrackId(selectedId);
+          setActivePage("track");
+        }}
+      />
     </div>
   );
 }
