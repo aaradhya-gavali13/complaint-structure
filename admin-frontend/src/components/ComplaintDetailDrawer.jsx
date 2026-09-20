@@ -520,11 +520,15 @@ export default function ComplaintDetailDrawer({
                       Direct Officer Notification: {activePhone}
                     </span>
                   </div>
-                  {directMessageResult?.sent && (
+                  {directMessageResult?.sent ? (
                     <span className="dispatch-badge-success">
                       ✓ Dispatched via {directMessageResult.provider || "SMS Router"}
                     </span>
-                  )}
+                  ) : directMessageResult?.error ? (
+                    <span style={{ fontSize: "0.72rem", color: "#f59e0b", background: "rgba(245, 158, 11, 0.12)", border: "1px solid rgba(245, 158, 11, 0.25)", padding: "2px 8px", borderRadius: "4px" }}>
+                      ⚠️ {directMessageResult.error}
+                    </span>
+                  ) : null}
                 </div>
 
                 <div className="officer-dispatch-toolbar">

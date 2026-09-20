@@ -1067,11 +1067,16 @@ def assign_complaint_officer(
         if payload.send_sms is not False:
             sms_dispatch_res = dispatch_officer_sms(complaint.assigned_officer_phone, msg_body)
             provider_label = sms_dispatch_res.get("provider", "Direct SMS Router")
+            if sms_dispatch_res.get("success"):
+                note = f"Direct SMS alert dispatched to Officer {complaint.assigned_officer_name} ({complaint.assigned_officer_phone}) via {provider_label}."
+            else:
+                err_detail = sms_dispatch_res.get("error", "Gateway response pending")
+                note = f"Direct SMS to Officer {complaint.assigned_officer_name} ({complaint.assigned_officer_phone}) via {provider_label}: {err_detail}."
             db.add(StatusHistory(
                 complaint_id=clean_id,
                 old_status=complaint.status,
                 new_status=complaint.status,
-                admin_note=f"Direct SMS alert dispatched to Officer {complaint.assigned_officer_name} ({complaint.assigned_officer_phone}) via {provider_label}.",
+                admin_note=note,
                 changed_by="SYSTEM"
             ))
 
@@ -1082,6 +1087,7 @@ def assign_complaint_officer(
             "message_text": msg_body,
             "whatsapp_url": wa_url,
             "sms_url": sms_url,
+            "error": sms_dispatch_res.get("error") if sms_dispatch_res and not sms_dispatch_res.get("success") else None,
         }
 
     db.commit()
@@ -1139,11 +1145,18 @@ def send_officer_message(
     sms_url = build_sms_url(target_phone, msg)
 
     admin_name = current_admin.get("full_name") or current_admin.get("username", "admin")
+    provider_label = sms_res.get("provider", "Direct SMS Router")
+    if sms_res.get("success"):
+        admin_note = f"Direct message dispatched to Officer {target_name} at {target_phone} via {provider_label} by {admin_name}."
+    else:
+        err_detail = sms_res.get("error", "Gateway delivery pending")
+        admin_note = f"Direct message attempted to Officer {target_name} at {target_phone} via {provider_label}: {err_detail}."
+
     db.add(StatusHistory(
         complaint_id=clean_id,
         old_status=complaint.status,
         new_status=complaint.status,
-        admin_note=f"Direct message re-sent to Officer {target_name} at {target_phone} by {admin_name}.",
+        admin_note=admin_note,
         changed_by=admin_name
     ))
     db.commit()
@@ -1153,13 +1166,14 @@ def send_officer_message(
         "recipient": target_phone,
         "officer_name": target_name,
         "direct_message": {
-            "sent": sms_res.get("success", True),
-            "provider": sms_res.get("provider", "Direct Gateway"),
+            "sent": sms_res.get("success", False),
+            "provider": provider_label,
             "message_text": msg,
             "whatsapp_url": wa_url,
             "sms_url": sms_url,
+            "error": sms_res.get("error") if not sms_res.get("success") else None,
         },
-        "message": f"Direct notification successfully dispatched to {target_phone}."
+        "message": f"Direct notification dispatched to {target_phone}." if sms_res.get("success") else f"Direct notification attempted: {sms_res.get('error', 'Pending')}"
     }
 
 
