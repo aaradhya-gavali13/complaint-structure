@@ -115,33 +115,46 @@ def dispatch_officer_sms(phone: str, message: str) -> Dict[str, Any]:
         except Exception as e:
             logger.error(f"Error calling Twilio API: {e}")
 
-    # 2. Fast2SMS Gateway (India)
+    # 2. Fast2SMS Quick Gateway (India - route=q)
     if fast2sms_key:
         try:
             import requests
-            # Fast2SMS expects 10-digit number without country code
+            # Extract last 10 digits for Indian mobile numbers
             local_digits = re.sub(r"\D", "", clean)[-10:]
-            url = "https://www.fast2sms.com/dev/bulkV2"
-            headers = {"authorization": fast2sms_key}
-            payload = {
-                "route": "v3",
-                "sender_id": "TXTIND",
-                "message": message[:160],
-                "language": "english",
-                "flash": 0,
-                "numbers": local_digits,
-            }
-            resp = requests.post(url, headers=headers, data=payload, timeout=10)
-            if resp.status_code == 200 and resp.json().get("return"):
-                logger.info(f"Fast2SMS message dispatched to {local_digits}")
-                return {
-                    "success": True,
-                    "provider": "Fast2SMS India Gateway",
-                    "recipient": clean,
-                    "status": "DELIVERED",
+            if len(local_digits) == 10:
+                url = "https://www.fast2sms.com/dev/bulkV2"
+                headers = {
+                    "authorization": fast2sms_key.strip(),
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "Cache-Control": "no-cache",
                 }
+                # Fast2SMS Quick SMS route ('q') sends directly without DLT template requirements
+                params = {
+                    "route": "q",
+                    "message": message[:160],  # Standard single SMS length
+                    "language": "english",
+                    "flash": "0",
+                    "numbers": local_digits,
+                }
+                resp = requests.get(url, headers=headers, params=params, timeout=10)
+                data = resp.json() if resp.text else {}
+                if resp.status_code == 200 and data.get("return") is True:
+                    logger.info(f"Fast2SMS (route=q) successfully dispatched to {local_digits}: {data.get('message')}")
+                    return {
+                        "success": True,
+                        "provider": "Fast2SMS Quick Gateway",
+                        "recipient": clean,
+                        "status": "DELIVERED",
+                        "request_id": data.get("request_id"),
+                        "fast2sms_message": data.get("message"),
+                    }
+                else:
+                    logger.warning(
+                        f"Fast2SMS failed (status={resp.status_code}): {data.get('message') or resp.text}"
+                    )
         except Exception as e:
             logger.error(f"Error calling Fast2SMS API: {e}")
+
 
     # 3. Built-in Reliable Simulated SMS Gateway & Audit Logger
     # Guarantees complete end-to-end operation in demo/test environments
