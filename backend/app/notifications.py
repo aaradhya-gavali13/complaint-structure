@@ -2,8 +2,17 @@ import os
 import re
 import urllib.parse
 import logging
+from pathlib import Path
 from datetime import datetime
 from typing import Optional, Dict, Any
+from dotenv import load_dotenv
+
+# Ensure .env is loaded reliably from workspace root or backend
+_root_env = Path(__file__).resolve().parent.parent.parent / ".env"
+if _root_env.exists():
+    load_dotenv(dotenv_path=_root_env)
+else:
+    load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -149,11 +158,24 @@ def dispatch_officer_sms(phone: str, message: str) -> Dict[str, Any]:
                         "fast2sms_message": data.get("message"),
                     }
                 else:
-                    logger.warning(
-                        f"Fast2SMS failed (status={resp.status_code}): {data.get('message') or resp.text}"
-                    )
+                    err_msg = data.get("message") or resp.text
+                    logger.warning(f"Fast2SMS error (status={resp.status_code}): {err_msg}")
+                    return {
+                        "success": False,
+                        "provider": "Fast2SMS Quick Gateway",
+                        "recipient": clean,
+                        "status": "FAILED",
+                        "error": str(err_msg),
+                    }
         except Exception as e:
             logger.error(f"Error calling Fast2SMS API: {e}")
+            return {
+                "success": False,
+                "provider": "Fast2SMS Quick Gateway",
+                "recipient": clean,
+                "status": "ERROR",
+                "error": str(e),
+            }
 
 
     # 3. Built-in Reliable Simulated SMS Gateway & Audit Logger
