@@ -5,16 +5,23 @@ from backend.app.config import settings
 
 logger = logging.getLogger("grievance_portal.database")
 
-# For SQLite, check_same_thread needs to be False
-connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+# Normalize DATABASE_URL for SQLAlchemy 2.0 (Render provides postgres:// which must be postgresql://)
+db_url = settings.DATABASE_URL
+if db_url.startswith("postgres://"):
+    db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args=connect_args,
-    echo=settings.DEBUG
-)
+connect_args = {}
+engine_kwargs = {"echo": settings.DEBUG}
+
+if db_url.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+    engine_kwargs["connect_args"] = connect_args
+else:
+    # PostgreSQL / MySQL production resilience
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
+
+engine = create_engine(db_url, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
