@@ -67,8 +67,13 @@ export default function App() {
   const [newComplaintAlert, setNewComplaintAlert] = useState(null);
   const previousTotalRef = useRef(null);
 
-  // 1. Check Initial Authentication
+  // 1. Check Initial Authentication & Listen for unauthorized events
   useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+    window.addEventListener("admin-unauthorized", handleUnauthorized);
+
     const checkSession = async () => {
       try {
         const u = await getCurrentAdmin();
@@ -80,6 +85,10 @@ export default function App() {
       }
     };
     checkSession();
+
+    return () => {
+      window.removeEventListener("admin-unauthorized", handleUnauthorized);
+    };
   }, []);
 
   // 2. Load Metadata (Departments & Priorities) once authenticated

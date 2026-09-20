@@ -32,6 +32,16 @@ export default function Footer({ setActivePage }) {
             <li>
               <a href="#about" onClick={(e) => { e.preventDefault(); setActivePage("about"); }}>Citizens Charter &amp; SLA</a>
             </li>
+            <li>
+              <a
+                href={import.meta.env.VITE_ADMIN_URL || "http://localhost:5174"}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: "#93c5fd", fontWeight: 500 }}
+              >
+                Official Admin Portal &rarr;
+              </a>
+            </li>
           </ul>
         </div>
 

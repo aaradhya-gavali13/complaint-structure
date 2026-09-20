@@ -7,19 +7,39 @@ const API_BASE = import.meta.env.VITE_API_URL || "https://complaint-structure.on
 const TOKEN_KEY = "grievance_admin_jwt";
 
 export function getStoredToken() {
-  return localStorage.getItem(TOKEN_KEY);
+  // Purge any legacy localStorage persistent token to prevent direct bypass
+  if (typeof window !== "undefined" && window.localStorage) {
+    try {
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    return sessionStorage.getItem(TOKEN_KEY);
+  }
+  return null;
 }
 
 export function setStoredToken(token) {
-  if (token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  } else {
-    localStorage.removeItem(TOKEN_KEY);
+  if (typeof window !== "undefined" && window.sessionStorage) {
+    if (token) {
+      sessionStorage.setItem(TOKEN_KEY, token);
+    } else {
+      sessionStorage.removeItem(TOKEN_KEY);
+    }
   }
 }
 
 export function clearStoredToken() {
-  localStorage.removeItem(TOKEN_KEY);
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(TOKEN_KEY);
+    } catch {
+      // ignore
+    }
+  }
 }
 
 async function authFetch(url, options = {}) {

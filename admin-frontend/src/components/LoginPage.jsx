@@ -3,21 +3,24 @@ import { Shield, User, Loader2, AlertCircle, Eye, EyeOff, X, KeyRound } from "./
 import { adminLogin } from "../api";
 
 export default function LoginPage({ onLoginSuccess }) {
-  const [username, setUsername] = useState("admin");
-  const [password, setPassword] = useState("Admin@Grievance2026");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showForgotModal, setShowForgotModal] = useState(false);
 
-
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError("Please enter your administrator username and password to proceed.");
+      return;
+    }
     setError(null);
     setLoading(true);
 
     try {
-      const res = await adminLogin(username, password);
+      const res = await adminLogin(username.trim(), password);
       onLoginSuccess({
         username: res.username,
         full_name: res.full_name,
@@ -61,8 +64,9 @@ export default function LoginPage({ onLoginSuccess }) {
               <input
                 type="text"
                 required
+                autoComplete="username"
                 className="form-input"
-                placeholder="Enter admin ID"
+                placeholder="Enter administrator ID"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
               />
@@ -96,6 +100,7 @@ export default function LoginPage({ onLoginSuccess }) {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                autoComplete="current-password"
                 className="form-input"
                 style={{ paddingRight: "2.75rem" }}
                 placeholder="Enter password"
@@ -137,12 +142,6 @@ export default function LoginPage({ onLoginSuccess }) {
             )}
           </button>
         </form>
-
-        {/* Hints */}
-        <div className="login-hint-box">
-          <p className="login-hint-label">Pre-configured Admin Access Credentials:</p>
-          <div className="login-hint-creds">admin / Admin@Grievance2026</div>
-        </div>
       </div>
 
       {/* Admin Password Recovery Modal */}
@@ -177,7 +176,7 @@ export default function LoginPage({ onLoginSuccess }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
               <h3 style={{ margin: 0, fontSize: "1.15rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                 <KeyRound size={20} color="#60a5fa" />
-                Admin Password Recovery
+                Administrative Access Assistance
               </h3>
               <button
                 type="button"
@@ -189,7 +188,7 @@ export default function LoginPage({ onLoginSuccess }) {
             </div>
 
             <p style={{ fontSize: "0.88rem", color: "#cbd5e1", lineHeight: 1.5, marginBottom: "1rem" }}>
-              The Administrative Command Center uses root security credentials configured via system environment variables.
+              Administrative Command Center privileges are governed under strict municipal security protocol.
             </p>
 
             <div
@@ -202,43 +201,29 @@ export default function LoginPage({ onLoginSuccess }) {
               }}
             >
               <div style={{ fontSize: "0.75rem", color: "#93c5fd", textTransform: "uppercase", fontWeight: 700, letterSpacing: "0.05em", marginBottom: "0.5rem" }}>
-                Active Credentials
+                Security Policy Notice
               </div>
-              <div style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#38bdf8", marginBottom: "0.35rem" }}>
-                Username: <strong>admin</strong>
-              </div>
-              <div style={{ fontFamily: "monospace", fontSize: "0.95rem", color: "#38bdf8" }}>
-                Password: <strong>Admin@Grievance2026</strong>
-              </div>
+              <p style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: 1.5, margin: 0 }}>
+                Direct access is protected. If you have forgotten your administrative credentials or need access restored, please contact your Chief IT Operations Administrator or refer to your department's secure environment deployment keys.
+              </p>
             </div>
 
-            <div style={{ display: "flex", gap: "0.75rem" }}>
-              <button
-                type="button"
-                className="login-btn"
-                style={{ flex: 1, padding: "0.6rem" }}
-                onClick={() => {
-                  setUsername("admin");
-                  setPassword("Admin@Grievance2026");
-                  setShowForgotModal(false);
-                }}
-              >
-                Auto-fill &amp; Close
-              </button>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
               <button
                 type="button"
                 style={{
-                  padding: "0.6rem 1rem",
-                  backgroundColor: "#334155",
+                  padding: "0.6rem 1.25rem",
+                  backgroundColor: "#2563eb",
                   border: "none",
                   borderRadius: "6px",
                   color: "#f8fafc",
                   cursor: "pointer",
-                  fontWeight: 500,
+                  fontWeight: 600,
+                  fontSize: "0.88rem",
                 }}
                 onClick={() => setShowForgotModal(false)}
               >
-                Close
+                Understood &amp; Close
               </button>
             </div>
           </div>
